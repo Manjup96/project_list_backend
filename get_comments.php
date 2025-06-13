@@ -45,7 +45,14 @@ $comments = [];
 // Fetch all results
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        $comments[] = $row;
+        $comments[] = [
+            "id" => $row['id'],
+            "comment" => $row['comment'],
+            "created_at" => $row['created_at'],
+            "user_id" => $row['user_id'],
+            "name" => $row['user_name'],
+            "seen_by_admin" => $row['seen_by_admin'] // Include this
+        ];
     }
     echo json_encode(["status" => "success", "data" => $comments]);
 } else {
