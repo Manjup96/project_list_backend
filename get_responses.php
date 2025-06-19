@@ -9,74 +9,77 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-// Include database connection settings
-include "config.php"; // Ensure this file has the correct connection details
+// Include the database connection file
+include 'config.php'; // Make sure this file contains the proper connection code
 
-// Get POST data
+// Get POST data (check the raw POST data)
 $data = json_decode(file_get_contents("php://input"));
-$comment_id = isset($data->comment_id) ? $data->comment_id : '';
+
+// Check if project_id is provided
 $project_id = isset($data->project_id) ? $data->project_id : '';
 
-// Validate that both comment_id and project_id are present
-if ($comment_id != '' && $project_id != '') {
-    // SQL query to fetch comment and related responses for a specific comment_id and project_id
+// Debug log to check if project_id is being received
+file_put_contents('php://stderr', "Received project_id: $project_id\n");
+
+// Check if project_id is not empty
+if ($project_id != '') {
+    // SQL query to fetch responses based on project_id from the responses table
     $query = "
-        SELECT c.comment, c.created_at AS comment_created, r.response_text, r.responded_by, r.response_date
-        FROM comments c
-        LEFT JOIN responses r ON c.id = r.comment_id
-        WHERE c.id = ? AND r.project_id = ?";  // Using both comment_id and project_id to filter results
+        SELECT r.id, r.response_text, r.responded_by, r.response_date
+        FROM responses r
+        INNER JOIN project_table p ON r.project_id = p.id
+        WHERE r.project_id = ?";
 
-    // Prepare the query
+    // Prepare the SQL statement
     if ($stmt = $conn->prepare($query)) {
-        // Bind the parameters (comment_id and project_id) to the query
-        $stmt->bind_param("ss", $comment_id, $project_id);
+        // Bind the project_id parameter
+        $stmt->bind_param("i", $project_id);  // 'i' for integer
 
-        // Execute the query
-        $stmt->execute();
+        // Execute the statement
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
 
-        // Get the result
-        $result = $stmt->get_result();
+            if ($result->num_rows > 0) {
+                $responses = [];
 
-        if ($result->num_rows > 0) {
-            // Fetch data into an array
-            $responses = [];
+                // Fetch all the responses
+                while ($row = $result->fetch_assoc()) {
+                    $responses[] = $row;
+                }
 
-            while ($row = $result->fetch_assoc()) {
-                $responses[] = $row;
+                // Return the response as JSON
+                echo json_encode([
+                    'status' => 'success',
+                    'data' => $responses
+                ]);
+            } else {
+                echo json_encode([
+                    'status' => 'failure',
+                    'message' => 'No responses found for the given project'
+                ]);
             }
-
-            // Return the success response with the fetched data
-            echo json_encode([
-                'status' => 'success',
-                'data' => $responses
-            ]);
         } else {
-            // No responses found
             echo json_encode([
                 'status' => 'failure',
-                'message' => 'No responses found for the given comment'
+                'message' => 'Error executing the query'
             ]);
         }
 
         // Close the prepared statement
         $stmt->close();
     } else {
-        // Query preparation failed
         echo json_encode([
             'status' => 'failure',
             'message' => 'Failed to prepare the query'
         ]);
     }
 } else {
-    // Invalid request if comment_id or project_id is missing
+    // If project_id is missing
     echo json_encode([
         'status' => 'failure',
-        'message' => 'Invalid request: comment_id and project_id are required'
+        'message' => 'Project ID is missing'
     ]);
 }
 
 // Close the database connection
 $conn->close();
-?>
-
-

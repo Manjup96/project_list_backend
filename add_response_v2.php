@@ -19,20 +19,21 @@ $data = json_decode(file_get_contents("php://input"));
 file_put_contents('php://stderr', print_r($data, TRUE)); // Log the incoming data
 
 // Check if the required fields are present in the POST request
-if (isset($data->comment_id) && isset($data->response_text) && isset($data->responded_by) && isset($data->project_id)) {
+if (isset($data->comment_id) && isset($data->response_text) && isset($data->responded_by) && isset($data->user_id) && isset($data->project_id)) {
     // Sanitize the input data
     $comment_id = $conn->real_escape_string($data->comment_id);
     $response_text = $conn->real_escape_string($data->response_text);
     $responded_by = $conn->real_escape_string($data->responded_by);
-    $project_id = $conn->real_escape_string($data->project_id); // Sanitize project_id
+    $user_id = $conn->real_escape_string($data->user_id); // Added user_id
+    $project_id = $conn->real_escape_string($data->project_id); // Added project_id
     $response_date = date('Y-m-d H:i:s'); // Current date and time
 
     // Log the sanitized data for debugging
-    file_put_contents('php://stderr', "Sanitized Data: comment_id=$comment_id, response_text=$response_text, responded_by=$responded_by, project_id=$project_id\n");
+    file_put_contents('php://stderr', "Sanitized Data: comment_id=$comment_id, response_text=$response_text, responded_by=$responded_by, user_id=$user_id, project_id=$project_id\n");
 
-    // Prepare the SQL query to insert the response
-    $sql = "INSERT INTO responses (comment_id, response_text, responded_by, response_date, project_id)
-            VALUES ('$comment_id', '$response_text', '$responded_by', '$response_date', '$project_id')";
+    // Prepare the SQL query to insert the response with user_id and project_id
+    $sql = "INSERT INTO responses (comment_id, response_text, responded_by, response_date, user_id, project_id)
+            VALUES ('$comment_id', '$response_text', '$responded_by', '$response_date', '$user_id', '$project_id')";
 
     // Log the SQL query for debugging
     file_put_contents('php://stderr', "SQL Query: $sql\n");
