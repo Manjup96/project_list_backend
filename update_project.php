@@ -14,23 +14,29 @@ $inputData = json_decode(file_get_contents("php://input"), true);
 if (isset($inputData['id']) && !empty($inputData['id'])) {
     $id = $inputData['id'];
     $user_id = $inputData['user_id'] ?? '';
-$name = $inputData['name'] ?? ''; 
+    $name = $inputData['name'] ?? '';
 
     // Collect other form data from the JSON input
-    $project_name = isset($inputData['project_name']) ? $inputData['project_name'] : null;
-    $primary_team_lead = isset($inputData['primary_team_lead']) ? $inputData['primary_team_lead'] : null;
-    $secondary_team_lead = isset($inputData['secondary_team_lead']) ? $inputData['secondary_team_lead'] : null;
-    $tester_name = isset($inputData['tester_name']) ? $inputData['tester_name'] : null;
-    $technical_skill_stack = isset($inputData['technical_skill_stack']) ? $inputData['technical_skill_stack'] : null;
-    $project_type = isset($inputData['project_type']) ? $inputData['project_type'] : null;
-    $application_type = isset($inputData['application_type']) ? $inputData['application_type'] : null;
-    $start_date = isset($inputData['start_date']) ? $inputData['start_date'] : null;
-    $internal_end_date = isset($inputData['internal_end_date']) ? $inputData['internal_end_date'] : null;
-    $client_end_date = isset($inputData['client_end_date']) ? $inputData['client_end_date'] : null;
+    $project_name = $inputData['project_name'] ?? null;
+    $primary_team_lead = $inputData['primary_team_lead'] ?? null;
+    $secondary_team_lead = $inputData['secondary_team_lead'] ?? null;
+    $tester_name = $inputData['tester_name'] ?? null;
+    $technical_skill_stack = $inputData['technical_skill_stack'] ?? null;
+    $project_type = $inputData['project_type'] ?? null;
+    $application_type = $inputData['application_type'] ?? null;
+    $technology_partner = $inputData['technology_partner'] ?? null; // ✅ Added
+    $start_date = $inputData['start_date'] ?? null;
+    $internal_end_date = $inputData['internal_end_date'] ?? null;
+    $client_end_date = $inputData['client_end_date'] ?? null;
 
-    // Validate the id (ensure it's numeric)
+    // Convert array to comma-separated string if needed
+    if (is_array($application_type)) {
+        $application_type = implode(',', $application_type);
+    }
+
+    // Validate the id
     if (is_numeric($id)) {
-        // Prepare the SQL query to update the project data
+        // ✅ Updated SQL query to include technology_partner
         $query = "UPDATE project_table SET 
                     project_name = ?, 
                     primary_team_lead = ?, 
@@ -39,15 +45,16 @@ $name = $inputData['name'] ?? '';
                     technical_skill_stack = ?, 
                     project_type = ?, 
                     application_type = ?, 
+                    technology_partner = ?, 
                     start_date = ?, 
                     internal_end_date = ?, 
                     client_end_date = ? 
                   WHERE id = ?";
 
         if ($stmt = $conn->prepare($query)) {
-            // Bind parameters, using "s" for string values and "i" for integer id
+            // ✅ Updated bind_param to include 12 parameters
             $stmt->bind_param(
-                "ssssssssssi",  // Corrected parameter types for binding
+                "sssssssssssi",  // 11 strings + 1 integer (id)
                 $project_name,
                 $primary_team_lead,
                 $secondary_team_lead,
@@ -55,24 +62,24 @@ $name = $inputData['name'] ?? '';
                 $technical_skill_stack,
                 $project_type,
                 $application_type,
+                $technology_partner,
                 $start_date,
                 $internal_end_date,
                 $client_end_date,
-                $id // Bind the id parameter for updating the correct record
+                $id
             );
 
-            // Execute the statement
             if ($stmt->execute()) {
                 if ($stmt->affected_rows > 0) {
                     echo json_encode(['status' => 'success', 'message' => 'Project updated successfully']);
                 } else {
-                    echo json_encode(['status' => 'error', 'message' => 'Failed to update project or no changes made']);
+                    echo json_encode(['status' => 'error', 'message' => 'No changes made or project not found']);
                 }
             } else {
-                echo json_encode(['status' => 'error', 'message' => 'Failed to execute the SQL statement']);
+                echo json_encode(['status' => 'error', 'message' => 'SQL execution failed']);
             }
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Failed to prepare the SQL statement']);
+            echo json_encode(['status' => 'error', 'message' => 'SQL preparation failed']);
         }
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Invalid ID']);
